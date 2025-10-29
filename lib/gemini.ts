@@ -1,31 +1,26 @@
-export async function getGeminiSummary(videoTranscript: string) {
-  const apiKey = process.env.GEMINI_API_KEY;
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-  if (!apiKey) {
-    throw new Error("Gemini API key not found!");
-  }
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Summarize this YouTube transcript in short points:\n\n${videoTranscript}`
-              }
-            ]
-          }
-        ]
-      }),
-    }
-  );
-
-  const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No summary generated";
+if (!apiKey) {
+  throw new Error("Gemini API key is missing! Check .env.local");
 }
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+export const summarizeVideo = async (transcript: string): Promise<string> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+      Summarize this YouTube video transcript clearly and concisely for student note-taking:
+      ${transcript}
+    `;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (err) {
+    console.error("Gemini API Error:", err);
+    return "Error summarizing video. Please try again.";
+  }
+};
